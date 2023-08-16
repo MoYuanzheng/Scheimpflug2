@@ -11,6 +11,8 @@ int main() {
     cv::Point3f Optocal_Center = point_center[0];
     //! 提取 传感器中心
     cv::Point3f Sensor_Center = point_center[1];
+    //! 提取 激光面中心
+    cv::Point3f Larse_Center = point_center[2];
     //! 求传感器与激光夹角
     theta_3 = Calculate_Laser_Sensor_Angle();
     theta_9 = PI / 2 - theta_3;
@@ -33,7 +35,7 @@ int main() {
     //! 求随机线面交点
     _Vec_Point_Pair PointPair = Random_Generate_Point_Pair(Optocal_Center, p1, P2, Line_Direction_Vector_Range);
 
-    //! 将固定点对追加到随机点对中 1-4角点 5中心
+    //! 将固定点对追加到随机点对中 1-4角点 5中心（p1小范围点）
     PointPair.p1.insert(std::end(PointPair.p1), std::begin(P1_Cornor_Points), std::end(P1_Cornor_Points));
     PointPair.p1.push_back(P1_Center_Points_Vec[0]);
 
@@ -49,8 +51,7 @@ int main() {
     cv::Point3f P1_Origin = Calculate_P1_Pixel_Origin(P1_Cornor_Points);
 
     //! 激光平面（物平面）像素化 
-    std::vector<cv::Point3f>P1_Pixel_Points = Coordinate_System_conversion_to_Pixel_P1(PointPair.p1, P1_Origin);
-
+    std::vector<cv::Point3f>Laser_Pixel_Points = Coordinate_System_conversion_to_Pixel_P1(PointPair.p1, P1_Origin);
 
     ////! 根据matlab格式打印坐标
     //cout << endl << "p1点 x" << endl;
@@ -79,15 +80,15 @@ int main() {
     //}
     //cout << endl << "p2像素点 x" << endl;
     //for (int i = 0; i < PointPair.p2.size(); i++) {
-    //    cout << P1_Pixel_Points[i].x << ' ';
+    //    cout << Laser_Pixel_Points[i].x << ' ';
     //}
     //cout << endl << "p2像素点 y" << endl;
     //for (int i = 0; i < PointPair.p2.size(); i++) {
-    //    cout << P1_Pixel_Points[i].y << ' ';
+    //    cout << Laser_Pixel_Points[i].y << ' ';
     //}
     //cout << endl << "p2像素点 z" << endl;
     //for (int i = 0; i < PointPair.p1.size(); i++) {
-    //    cout << P1_Pixel_Points[i].z << ' ';
+    //    cout << Laser_Pixel_Points[i].z << ' ';
     //}
     //cout << endl << "平移像素 x" << endl;
     //for (int i = 0; i < Image_Pixel_Points.size(); i++) {
@@ -100,16 +101,70 @@ int main() {
 
     for (int i = 0; i < 5; i++)
     {
-        P1_Pixel_Points.pop_back();
+        Laser_Pixel_Points.pop_back();
         Image_Pixel_Points.pop_back();
     }
+    std::vector<cv::Point3f>Object = {
+        {0.00000000, 0.00000000 , 0.00000000 },
+        {0.00000000, 10.0000000 , 0.00000000 },
+        {0.00000000, 20.0000000 , 0.00000000 },
+        {0.00000000, 30.0000000 , 0.00000000 },
+        {10.0000000, 0.00000000 , 0.00000000 },
+        {10.0000000, 10.0000000 , 0.00000000 },
+        {10.0000000, 20.0000000 , 0.00000000 },
+        {10.0000000, 30.0000000 , 0.00000000 },
+        {20.0000000, 0.00000000 , 0.00000000 },
+        {20.0000000, 10.0000000 , 0.00000000 },
+        {20.0000000, 20.0000000 , 0.00000000 },
+        {20.0000000, 30.0000000 , 0.00000000 },
+        {30.0000000, 0.00000000 , 0.00000000 },
+        {30.0000000, 10.0000000 , 0.00000000 },
+        {30.0000000, 20.0000000 , 0.00000000 },
+        {30.0000000, 30.0000000 , 0.00000000 },
+        {40.0000000, 0.00000000 , 0.00000000 },
+        {40.0000000, 10.0000000 , 0.00000000 },
+        {40.0000000, 20.0000000 , 0.00000000 },
+        {40.0000000, 30.0000000 , 0.00000000 },
+        {50.0000000, 0.00000000 , 0.00000000 },
+        {50.0000000, 10.0000000 , 0.00000000 },
+        {50.0000000, 20.0000000 , 0.00000000 },
+        {50.0000000, 30.0000000 , 0.00000000 }
+    };
 
-    // !**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--
+    std::vector<cv::Point2f>Image = {
+        {424.833801,86.0681152 },
+        {423.785706,130.357147 },
+        {422.500000,172.500000 },
+        {421.000000,213.500000 },
+        {388.000000,100.000000 },
+        {387.750000,144.125000 },
+        {386.375000,186.375000 },
+        {384.681824,227.681824 },
+        {348.758057,113.338707 },
+        {348.625000,158.625000 },
+        {348.750000,201.125000 },
+        {348.500000,243.000000 },
+        {308.785706,127.357140 },
+        {309.241943,172.661285 },
+        {310.000000,216.500000 },
+        {310.000000,258.500000 },
+        {267.166656,141.722229 },
+        {268.214294,187.642853 },
+        {269.420013,232.139999 },
+        {270.500000,274.500000 },
+        {222.927689,156.327515 },
+        {225.419998,203.139999 },
+        {228.000000,247.750000 },
+        {228.714508,290.991791 }
+    };
+    // cv::Mat _P = Matrix_P(Object, Image);
+     //cv::Mat _m = Martix_m(_P);
+     // !**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--
 
     std::vector < std::vector<cv::Point3f>> obj;
     std::vector < std::vector<cv::Point2f>> img;
 
-    obj.push_back(P1_Pixel_Points);
+    obj.push_back(Laser_Pixel_Points);
     img.push_back(Image_Pixel_Points);
     //! ----------------------------------------------------------------------------------------------------------------
     //float data[] = { 350, 0, 1224,0,420,512,0,0,1 };
@@ -149,6 +204,10 @@ std::vector<cv::Point3f> Calculate_Optical_Sensor_Center_Point() {
     cv::Point3f Sensor_Center = { 0.0, -static_cast<float>((distance_a + distance_f)) ,-static_cast<float>(distance_h) };
 
     P.push_back(Sensor_Center);
+
+    cv::Point3f Larse_Center = { 0.0,0.0 ,-static_cast<float>(distance_e + distance_g) };
+
+    P.push_back(Larse_Center);
 
     return P;
 }
@@ -246,7 +305,7 @@ cv::Size2f Calculate_FOV_Small_Size(std::vector<cv::Point3f> Cornor_Points) {
     return cv::Size2f(width, height);
 }
 
-//! 计算梯形视场中心坐标
+//! 计算左右对称面 中心坐标
 cv::Point3f Calculate_Object_Center_Point(std::vector<cv::Point3f> Cornor_Points) {
 
     //! （ 大数 - 小数 ）/ 2 + 小数
@@ -304,7 +363,6 @@ std::vector<cv::Point3f> Calculate_Special_Points(cv::Point3f optical_center, _P
     return Another_Points;
 }
 
-
 //! 限制：线方向向量（靶面出发至梯形视场内的最大矩形角点）
 std::vector<_Line> Limit_P2_Intersection_Point_Range(cv::Point3f Optocal_Center, vector<cv::Point3f> Corner_Points) {
 
@@ -361,10 +419,7 @@ _Vec_Point_Pair Random_Generate_Point_Pair(cv::Point3f optical_center, _Plane p1
     return PointPair;
 }
 
-
-
 //! 将传感器平面转为以角点建立坐标系（旋转、平移及像素化）
-//? 修改源点坐标位置获取方式
 std::vector<cv::Point2f> Coordinate_System_conversion_to_Pixel_P2(vector<cv::Point3f> points) {
 
     std::vector<cv::Point3f> points_R;
@@ -376,20 +431,21 @@ std::vector<cv::Point2f> Coordinate_System_conversion_to_Pixel_P2(vector<cv::Poi
         points_R[i].y = points[i].y * cos(theta_9) + points[i].z * sin(theta_9);
         points_R[i].z = -points[i].y * sin(theta_9) + points[i].z * cos(theta_9);
 
-        //! 旋转 沿X轴 顺时针旋转 theta_9 个弧度
-        //points_R[i].y = points[i].y * cos(theta_9) - points[i].z * sin(theta_9);
-        //points_R[i].z = points[i].y * sin(theta_9) + points[i].z * cos(theta_9);
     }
 
     //! 平移至角点 建立像素坐标系
     std::vector<cv::Point3f> points_RT;
-    //cv::Point3f Origin = ;
     for (int i = 0; i < points_R.size(); i++) {
+
+        if (points_R[i].z < 1e-3) {
+            points_R[i].z = 0.0;
+        }
 
         points_RT.push_back({
            -(points_R[i].y - points_R[LINE_NUMBER + 1].y),
            -(points_R[i].x - points_R[LINE_NUMBER + 1].x),
-            points_R[i].z }
+            points_R[i].z
+            }
         );
     }
 
@@ -419,7 +475,6 @@ std::vector<cv::Point2f> Coordinate_System_conversion_to_Pixel_P2(vector<cv::Poi
 
     return Image_Pixel_Points;
 }
-
 
 //! 激光平面像素坐标系原点
 cv::Point3f Calculate_P1_Pixel_Origin(std::vector<cv::Point3f> Cornor_Points) {
@@ -452,7 +507,7 @@ cv::Point3f Calculate_P1_Pixel_Origin(std::vector<cv::Point3f> Cornor_Points) {
 
 //! 激光平面像素化
 std::vector<cv::Point3f> Coordinate_System_conversion_to_Pixel_P1(std::vector<cv::Point3f> Points, cv::Point3f Origin) {
-    std::vector<cv::Point3f> P1_Pixel_Points;
+    std::vector<cv::Point3f> Laser_Pixel_Points;
 
     for (int i = 0; i < Points.size(); i++) {
 
@@ -462,21 +517,21 @@ std::vector<cv::Point3f> Coordinate_System_conversion_to_Pixel_P1(std::vector<cv
         Points[i].z = Points[i].z - Origin.z;
 
         //! 交换并存贮
-        P1_Pixel_Points.push_back({ -Points[i].z, -Points[i].x,  0 });
+        Laser_Pixel_Points.push_back({ -Points[i].z, -Points[i].x,  0 });
     }
 
     //cout << endl << "p1平移像素 x" << endl;
-    //for (int i = 0; i < P1_Pixel_Points.size(); i++) {
-    //    cout << P1_Pixel_Points[i].x << ' ';
+    //for (int i = 0; i < Laser_Pixel_Points.size(); i++) {
+    //    cout << Laser_Pixel_Points[i].x << ' ';
     //}
 
     //cout << endl << "p1平移像素 y" << endl;
 
-    //for (int i = 0; i < P1_Pixel_Points.size(); i++) {
-    //    cout << P1_Pixel_Points[i].y << ' ';
+    //for (int i = 0; i < Laser_Pixel_Points.size(); i++) {
+    //    cout << Laser_Pixel_Points[i].y << ' ';
     //}
 
-    return P1_Pixel_Points;
+    return Laser_Pixel_Points;
 
 }
 
@@ -488,4 +543,78 @@ cv::Size2f Calculate_FOV_Max(std::vector<cv::Point3f> Cornor_Points) {
 
     return cv::Size2f(width, height);
 
+}
+
+
+//! 标定函数部分
+//! 构建待分解矩阵P
+cv::Mat Matrix_P(std::vector<cv::Point3f>Object, std::vector<cv::Point2f>Image) {
+
+
+    int row_number = Object.size();
+
+
+    cv::Mat Matrix_P = cv::Mat::zeros(row_number * 2, 12, CV_32F);
+    int index = 0;
+    for (int i = 0; i < row_number * 2; i++) {
+        //! 偶数列
+        index = i / 2;
+        if (i % 2 == 0) {
+            Matrix_P.at<float>(i, 0) = Object[index].x;
+            Matrix_P.at<float>(i, 1) = Object[index].y;
+            Matrix_P.at<float>(i, 2) = Object[index].z;
+            Matrix_P.at<float>(i, 3) = 1.0;
+
+            Matrix_P.at<float>(i, 4) = 0.0;
+            Matrix_P.at<float>(i, 5) = 0.0;
+            Matrix_P.at<float>(i, 6) = 0.0;
+            Matrix_P.at<float>(i, 7) = 0.0;
+
+            Matrix_P.at<float>(i, 8) = -Image[index].x * Object[index].x;
+            Matrix_P.at<float>(i, 9) = -Image[index].x * Object[index].y;
+            Matrix_P.at<float>(i, 10) = -Image[index].x * Object[index].z;
+            Matrix_P.at<float>(i, 11) = -Image[index].x * 1.0;
+        }
+        //! 奇数列
+        else {
+            Matrix_P.at<float>(i, 0) = 0.0;
+            Matrix_P.at<float>(i, 1) = 0.0;
+            Matrix_P.at<float>(i, 2) = 0.0;
+            Matrix_P.at<float>(i, 3) = 0.0;
+
+            Matrix_P.at<float>(i, 4) = Object[index].x;
+            Matrix_P.at<float>(i, 5) = Object[index].y;
+            Matrix_P.at<float>(i, 6) = Object[index].z;
+            Matrix_P.at<float>(i, 7) = 1.0;
+
+            Matrix_P.at<float>(i, 8) = -Image[index].y * Object[index].x;
+            Matrix_P.at<float>(i, 9) = -Image[index].y * Object[index].y;
+            Matrix_P.at<float>(i, 10) = -Image[index].y * Object[index].z;
+            Matrix_P.at<float>(i, 11) = -Image[index].y * 1.0;
+        }
+    }
+    return Matrix_P;
+}
+
+//! 对矩阵P进行奇异值分解
+cv::Mat Martix_m(cv::Mat Matrix_P) {
+    cv::Mat Martix_m = cv::Mat::zeros(12, 1, CV_32F);
+
+    // 创建cv::SVD对象
+    cv::SVD svd;
+
+    // 进行SVD分解
+    svd(Matrix_P);
+
+    // 获取分解后的结果
+    cv::Mat U = svd.u;      // 正交矩阵U
+    cv::Mat W = svd.w;      // 对角矩阵W
+    cv::Mat Vt = svd.vt;    // 转置正交矩阵Vt
+
+    // 输出分解结果
+    std::cout << "U: " << U << std::endl;
+    std::cout << "W: " << W << std::endl;
+    std::cout << "Vt: " << Vt << std::endl;
+
+    return Martix_m;
 }

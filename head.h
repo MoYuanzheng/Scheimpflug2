@@ -39,10 +39,10 @@ struct _Vec_Point_Pair
 //! theta_1[已知] 激光平面与光轴夹角
 const double theta_1 = 45.0 / 180 * PI;
 
-//! theta_2[已知] 光轴与传感器平面夹角
+//! theta_2[未知] 光轴与传感器平面夹角
 double theta_2 = 0;
 
-//! theta_3[已知] 激光平面与传感器平面夹角
+//! theta_3[未知] 激光平面与传感器平面夹角
 double theta_3 = 0;
 
 //! theta_4[未知] 激光平面与镜头平面夹角
@@ -72,13 +72,13 @@ const cv::Size2f Sensor_Size = { 4.608,9.216 };
 vector<cv::Point3f> P2_4_Corner;
 
 //! 靶面 -> 尺寸 -> 像素
-const cv::Size Image_Size = { 2048,1024 };
+const cv::Size Image_Size = { 1024,2048 };
 
 //! p2为成像平面（传感器平面）
 _Plane P2 = { 0.0,0.0,0.0,0.0 };
 
 //! 生成直线数量
-const int LINE_NUMBER = 100;
+const int LINE_NUMBER = 201;
 
 //! 设置畸变因子
 const double k1 = 0.04408749451738147;
@@ -95,7 +95,10 @@ const double Cols_Sample_Rate = 1 / Pixel_length;
 
 
 //! ===============================================================================================
+
 //! 函数声明部分
+//! 
+//! 点对函数部分
 std::vector<cv::Point3f> Calculate_Optical_Sensor_Center_Point();
 double Calculate_Laser_Sensor_Angle();
 void Calculate_P2_Corner(cv::Point3f Sensor_Center, cv::Size2f Sensor_Size, double theta_9);
@@ -105,7 +108,6 @@ cv::Point3f Calculate_Line_Plane_Intersection_Point(cv::Point3f optical_center, 
 std::vector<cv::Point3f> Calculate_Special_Points(cv::Point3f optical_center, _Plane plane, vector<cv::Point3f> Corner_Points);
 _Vec_Point_Pair Random_Generate_Point_Pair(cv::Point3f optical_center, _Plane p1, _Plane p2, vector<_Line> Line_Direction_Vector_Range, int number = LINE_NUMBER);
 
-
 cv::Point3f Calculate_P1_Pixel_Origin(std::vector<cv::Point3f> Cornor_Points);
 
 std::vector<cv::Point3f> Coordinate_System_conversion_to_Pixel_P1(std::vector<cv::Point3f> Points, cv::Point3f Origin);
@@ -113,8 +115,15 @@ std::vector<cv::Point2f> Coordinate_System_conversion_to_Pixel_P2(vector<cv::Poi
 cv::Size2f Calculate_FOV_Max(std::vector<cv::Point3f> Cornor_Points);
 cv::Size2f Calculate_FOV_Small_Size(std::vector<cv::Point3f> Cornor_Points);
 
-
-
 std::vector<cv::Point3f> FOV_Points_Small(vector<cv::Point3f> Corner_Points);
 
 cv::Point3f Calculate_Object_Center_Point(std::vector<cv::Point3f> Cornor_Points);
+
+
+//! 标定函数部分
+//! 
+//! 构建P矩阵
+cv::Mat Matrix_P(std::vector<cv::Point3f>Object, std::vector<cv::Point2f>Image);
+
+//! 分解
+cv::Mat Martix_m(cv::Mat Matrix_P);
