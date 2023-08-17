@@ -78,7 +78,7 @@ const cv::Size Image_Size = { 1024,2048 };
 _Plane P2 = { 0.0,0.0,0.0,0.0 };
 
 //! 生成直线数量
-const int LINE_NUMBER = 201;
+const int LINE_NUMBER = 15 * 11;
 
 //! 设置畸变因子
 const double k1 = 0.04408749451738147;
@@ -119,11 +119,11 @@ std::vector<cv::Point3f> FOV_Points_Small(vector<cv::Point3f> Corner_Points);
 
 cv::Point3f Calculate_Object_Center_Point(std::vector<cv::Point3f> Cornor_Points);
 
-
+_Vec_Point_Pair Regular_Generate_Point_Pair(cv::Point3f optical_center, _Plane p1, _Plane p2, std::vector<cv::Point3f> P1_Cornor_Points_Small);
 //! 标定函数部分
 //! 
 //! 构建P矩阵
 cv::Mat Matrix_P(std::vector<cv::Point3f>Object, std::vector<cv::Point2f>Image);
 
 //! 分解
-cv::Mat Martix_m(cv::Mat Matrix_P);
+cv::Mat Martix_H(cv::Mat Matrix_P);

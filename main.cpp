@@ -33,7 +33,9 @@ int main() {
     vector<_Line> Line_Direction_Vector_Range = Limit_P2_Intersection_Point_Range(Optocal_Center, P1_Cornor_Points_Small);
 
     //! 求随机线面交点
-    _Vec_Point_Pair PointPair = Random_Generate_Point_Pair(Optocal_Center, p1, P2, Line_Direction_Vector_Range);
+    //_Vec_Point_Pair PointPair = Random_Generate_Point_Pair(Optocal_Center, p1, P2, Line_Direction_Vector_Range);
+    //! 求规则线面交点
+    _Vec_Point_Pair PointPair = Regular_Generate_Point_Pair(Optocal_Center, p1, P2, P1_Cornor_Points_Small);
 
     //! 将固定点对追加到随机点对中 1-4角点 5中心（p1小范围点）
     PointPair.p1.insert(std::end(PointPair.p1), std::begin(P1_Cornor_Points), std::end(P1_Cornor_Points));
@@ -157,29 +159,45 @@ int main() {
         {228.000000,247.750000 },
         {228.714508,290.991791 }
     };
-    // cv::Mat _P = Matrix_P(Object, Image);
-     //cv::Mat _m = Martix_m(_P);
-     // !**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--
+    //! 手动标定部分
+    cv::Mat _P = Matrix_P(Laser_Pixel_Points, Image_Pixel_Points);
+    cv::Mat _H = Martix_H(_P);
 
+
+    // !**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--
     std::vector < std::vector<cv::Point3f>> obj;
     std::vector < std::vector<cv::Point2f>> img;
 
     obj.push_back(Laser_Pixel_Points);
     img.push_back(Image_Pixel_Points);
     //! ----------------------------------------------------------------------------------------------------------------
-    //float data[] = { 350, 0, 1224,0,420,512,0,0,1 };
-    //cv::Mat cameraMatrix(3, 3, CV_32FC1, data);
+
     cv::Mat cameraMatrix;
     cv::Mat distCoeffs;
     std::vector<cv::Mat> rvecsMat;
     std::vector<cv::Mat> tvecsMat;
 
 
-    ///*运行标定函数*/
+    /*运行标定函数*/
     float err_first = 0.0;
-    err_first = cv::calibrateCamera(obj, img, Image_Size, cameraMatrix, distCoeffs, rvecsMat, tvecsMat, 0);
+    //! cv::CALIB_TILTED_MODEL 
+    err_first = cv::calibrateCamera(obj, img, Image_Size, cameraMatrix, distCoeffs, rvecsMat, tvecsMat, cv::CALIB_TILTED_MODEL);
 
-    ///*输出内参数*/
+
+    //! 经测试 相差一个尺度因子
+    cv::Mat _Test_I1 = cv::Mat::zeros(3, 1, CV_32FC1);
+    _Test_I1.at<float>(0, 0) = 10.8919144;
+    _Test_I1.at<float>(1, 0) = 17.1100388;
+    _Test_I1.at<float>(2, 0) = 0;
+    cout << _H * _Test_I1 << endl;
+
+    //! 保存重新计算得到的投影点
+    vector<cv::Point2f> image_points2;
+
+    projectPoints(_Test_I1, rvecsMat[0], tvecsMat[0], cameraMatrix, distCoeffs, image_points2);
+
+
+    /*输出内参数*/
     std::cout << "cameraMatrix:" << std::endl << cameraMatrix << std::endl;
     std::cout << "distCoeffs:" << std::endl << distCoeffs << std::endl;
     std::cout << "rvecsMat:" << std::endl << rvecsMat[0] << std::endl;
@@ -460,7 +478,6 @@ std::vector<cv::Point2f> Coordinate_System_conversion_to_Pixel_P2(vector<cv::Poi
     }
 
 
-
     //cout << "像素点 x" << endl;
     //for (int i = 0; i < points_R.size(); i++) {
     //    cout << points_R[i].x << ' ';
@@ -545,16 +562,44 @@ cv::Size2f Calculate_FOV_Max(std::vector<cv::Point3f> Cornor_Points) {
 
 }
 
+//! 平均取点 一毫米一个点
+_Vec_Point_Pair Regular_Generate_Point_Pair(cv::Point3f optical_center, _Plane p1, _Plane p2, std::vector<cv::Point3f> P1_Cornor_Points_Small) {
+    //! 每一毫米生成一个点
+    _Vec_Point_Pair PointPair;
+
+    cv::Point3f origin = P1_Cornor_Points_Small[1];
+    int count = 0;
+    float _x, _y, _z;
+    for (float i = 0.0; i < 15; i++) {
+
+        for (float j = 0.0; j < 11; j++)
+        {
+            _x = origin.x - i;
+            _y = 0.0;
+            _z = origin.z - j;
+            PointPair.p1.push_back({ _x, _y, _z });
+
+            PointPair.p2.push_back(Calculate_Line_Plane_Intersection_Point(
+                optical_center, p2, {
+                    _x - optical_center.x,
+                    _y - optical_center.y,
+                    _z - optical_center.z
+                }));
+        }
+    }
+
+    return PointPair;
+}
+
 
 //! 标定函数部分
 //! 构建待分解矩阵P
 cv::Mat Matrix_P(std::vector<cv::Point3f>Object, std::vector<cv::Point2f>Image) {
 
-
     int row_number = Object.size();
 
-
-    cv::Mat Matrix_P = cv::Mat::zeros(row_number * 2, 12, CV_32F);
+    //! 认定激光平面深度为0 故Z轴不参与计算 
+    cv::Mat Matrix_P = cv::Mat::zeros(row_number * 2, 9, CV_32F);
     int index = 0;
     for (int i = 0; i < row_number * 2; i++) {
         //! 偶数列
@@ -562,43 +607,43 @@ cv::Mat Matrix_P(std::vector<cv::Point3f>Object, std::vector<cv::Point2f>Image) 
         if (i % 2 == 0) {
             Matrix_P.at<float>(i, 0) = Object[index].x;
             Matrix_P.at<float>(i, 1) = Object[index].y;
-            Matrix_P.at<float>(i, 2) = Object[index].z;
-            Matrix_P.at<float>(i, 3) = 1.0;
+            //Matrix_P.at<float>(i, 2) = Object[index].z;
+            Matrix_P.at<float>(i, 2) = 1.0;
 
+            Matrix_P.at<float>(i, 3) = 0.0;
             Matrix_P.at<float>(i, 4) = 0.0;
+            //Matrix_P.at<float>(i, 6) = 0.0;
             Matrix_P.at<float>(i, 5) = 0.0;
-            Matrix_P.at<float>(i, 6) = 0.0;
-            Matrix_P.at<float>(i, 7) = 0.0;
 
-            Matrix_P.at<float>(i, 8) = -Image[index].x * Object[index].x;
-            Matrix_P.at<float>(i, 9) = -Image[index].x * Object[index].y;
-            Matrix_P.at<float>(i, 10) = -Image[index].x * Object[index].z;
-            Matrix_P.at<float>(i, 11) = -Image[index].x * 1.0;
+            Matrix_P.at<float>(i, 6) = -Image[index].x * Object[index].x;
+            Matrix_P.at<float>(i, 7) = -Image[index].x * Object[index].y;
+            //Matrix_P.at<float>(i, 10) = -Image[index].x * Object[index].z;
+            Matrix_P.at<float>(i, 8) = -Image[index].x * 1.0;
         }
         //! 奇数列
         else {
             Matrix_P.at<float>(i, 0) = 0.0;
             Matrix_P.at<float>(i, 1) = 0.0;
+            //Matrix_P.at<float>(i, 2) = 0.0;
             Matrix_P.at<float>(i, 2) = 0.0;
-            Matrix_P.at<float>(i, 3) = 0.0;
 
-            Matrix_P.at<float>(i, 4) = Object[index].x;
-            Matrix_P.at<float>(i, 5) = Object[index].y;
-            Matrix_P.at<float>(i, 6) = Object[index].z;
-            Matrix_P.at<float>(i, 7) = 1.0;
+            Matrix_P.at<float>(i, 3) = Object[index].x;
+            Matrix_P.at<float>(i, 4) = Object[index].y;
+            //Matrix_P.at<float>(i, 6) = Object[index].z;
+            Matrix_P.at<float>(i, 5) = 1.0;
 
-            Matrix_P.at<float>(i, 8) = -Image[index].y * Object[index].x;
-            Matrix_P.at<float>(i, 9) = -Image[index].y * Object[index].y;
-            Matrix_P.at<float>(i, 10) = -Image[index].y * Object[index].z;
-            Matrix_P.at<float>(i, 11) = -Image[index].y * 1.0;
+            Matrix_P.at<float>(i, 6) = -Image[index].y * Object[index].x;
+            Matrix_P.at<float>(i, 7) = -Image[index].y * Object[index].y;
+            //Matrix_P.at<float>(i, 10) = -Image[index].y * Object[index].z;
+            Matrix_P.at<float>(i, 8) = -Image[index].y * 1.0;
         }
     }
     return Matrix_P;
 }
 
-//! 对矩阵P进行奇异值分解
-cv::Mat Martix_m(cv::Mat Matrix_P) {
-    cv::Mat Martix_m = cv::Mat::zeros(12, 1, CV_32F);
+//! 得到单应性矩阵M
+cv::Mat Martix_H(cv::Mat Matrix_P) {
+    //cv::Mat Martix_H = cv::Mat::zeros(9, 1, CV_32F);
 
     // 创建cv::SVD对象
     cv::SVD svd;
@@ -607,14 +652,22 @@ cv::Mat Martix_m(cv::Mat Matrix_P) {
     svd(Matrix_P);
 
     // 获取分解后的结果
-    cv::Mat U = svd.u;      // 正交矩阵U
-    cv::Mat W = svd.w;      // 对角矩阵W
+    //cv::Mat U = svd.u;      // 正交矩阵U
+    //cv::Mat W = svd.w;      // 对角矩阵W
     cv::Mat Vt = svd.vt;    // 转置正交矩阵Vt
 
     // 输出分解结果
-    std::cout << "U: " << U << std::endl;
-    std::cout << "W: " << W << std::endl;
+    //std::cout << "U: " << U << std::endl;
+    //std::cout << "W: " << W << std::endl;
     std::cout << "Vt: " << Vt << std::endl;
+    cv::Mat Martix_V = Vt.row(8).t();
+    cv::Mat Martix_H = cv::Mat::zeros(3, 3, CV_32FC1);
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            Martix_H.at<float>(i, j) = Martix_V.at<float>(i * 3 + j, 0);
+        }
+    }
 
-    return Martix_m;
+    cv::Mat Martix_H = VT.row(8).reshape(0, 3);
+    return Martix_H;
 }
