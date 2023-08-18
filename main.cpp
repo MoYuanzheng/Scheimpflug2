@@ -134,26 +134,14 @@ int main() {
     //    {228.714508,290.991791 }
     //};
 
-    // !-------- OpenCV 自动标定 ----------------------------------------------------------------------------------------------------
-    std::vector < std::vector<cv::Point3f>> Object_Vec_CV;
-    std::vector < std::vector<cv::Point2f>> Image_Vec_CV;
-
-    Object_Vec_CV.push_back(PointPair[2]);
-    Image_Vec_CV.push_back(Image_Pixel_Points);
-    cv::Mat cameraMatrix, distCoeffs;
-    std::vector<cv::Mat> rvecsMat, tvecsMat;
-
-    //! cv::CALIB_TILTED_MODEL 
-     float err_first = cv::calibrateCamera(Object_Vec_CV, Image_Vec_CV, Image_Size, cameraMatrix, distCoeffs, rvecsMat, tvecsMat, cv::CALIB_TILTED_MODEL);
-
-    //! 手动标定部分
+        //! 手动标定部分
     //! -------- OpenCV 单应性矩阵测试 ----------------------------------------------------------------------------------------------------
     cv::Mat homographyMatrix = cv::findHomography(PointPair[2], Image_Pixel_Points, cv::LMEDS);
     homographyMatrix.convertTo(homographyMatrix, CV_32FC1);
     std::vector<cv::Point2f> _CV_H_Reproject_Points;
     std::vector<cv::Point2f> _CV_H_Reproject_Errors;
     double _CV_H_Error_Mean = _Reproject(PointPair[2], Image_Pixel_Points, homographyMatrix, _CV_H_Reproject_Points, _CV_H_Reproject_Errors, false);
-    
+
     //! --------SVD 单应性矩阵测试----------------------------------------------------------------------------------------------------
     cv::Mat _P = Matrix_P(PointPair[2], Image_Pixel_Points);
     cv::Mat _H = Martix_H(_P);
@@ -162,13 +150,32 @@ int main() {
     double _H_Error_Mean = _Reproject(PointPair[2], Image_Pixel_Points, _H, _H_Reproject_Points, _H_Reproject_Errors, true);
 
 
+
+
+
+
+
+
+    // !-------- OpenCV 自动标定 ----------------------------------------------------------------------------------------------------
+    std::vector < std::vector<cv::Point3f>> Object_Vec_CV;
+    std::vector < std::vector<cv::Point2f>> Image_Vec_CV;
+
+    Object_Vec_CV.push_back(PointPair[2]);
+    Image_Vec_CV.push_back(Image_Pixel_Points);
+
+    cv::Mat cameraMatrix, distCoeffs;
+    std::vector<cv::Mat> rvecsMat, tvecsMat;
+
+    //! cv::CALIB_TILTED_MODEL 
+    float err_first = cv::calibrateCamera(Object_Vec_CV, Image_Vec_CV, Image_Size, cameraMatrix, distCoeffs, rvecsMat, tvecsMat, cv::CALIB_TILTED_MODEL);
+
     // !**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--
     //! 保存重新计算得到的投影点
     vector<cv::Point2f> Reprojection_Points;
     vector<cv::Point2f> Reprojection_Error_All;
+    projectPoints(PointPair[2], rvecsMat[0], tvecsMat[0], cameraMatrix, distCoeffs, Reprojection_Points);
 
     for (int i = 0; i < PointPair[2].size(); i++) {
-        projectPoints(PointPair[2], rvecsMat[0], tvecsMat[0], cameraMatrix, distCoeffs, Reprojection_Points);
         Reprojection_Error_All.push_back({
             fabs(Image_Pixel_Points[i].x - Reprojection_Points[i].x),
             fabs(Image_Pixel_Points[i].y - Reprojection_Points[i].y),
@@ -493,7 +500,7 @@ cv::Mat Martix_H(cv::Mat Matrix_P) {
     // 输出分解结果
     //std::cout << "U: " << U << std::endl;
     //std::cout << "W: " << W << std::endl;
-    std::cout << "Vt: " << Vt << std::endl;
+    //std::cout << "Vt: " << Vt << std::endl;
     //cv::Mat Martix_V = Vt.row(8).t();
     //cv::Mat Martix_H = cv::Mat::zeros(3, 3, CV_32FC1);
     //for (int i = 0; i < 3; i++) {
@@ -510,7 +517,13 @@ cv::Mat Martix_H(cv::Mat Matrix_P) {
 //! 参数4：_H_Reproject_Points : 各点重投影结果集合
 //! 参数5：_H_Reproject_Errors : 各点重投影误差集合
 //! 参数6：Normal_Flag : 单应性矩阵是否归一化
-double _Reproject(std::vector<cv::Point3f> Object, std::vector<cv::Point2f> Image, cv::Mat _H, std::vector<cv::Point2f>& _H_Reproject_Points, std::vector<cv::Point2f>& _H_Reproject_Errors, bool Normal_Flag) {
+double _Reproject(
+    std::vector<cv::Point3f> Object,
+    std::vector<cv::Point2f> Image,
+    cv::Mat _H,
+    std::vector<cv::Point2f>& _H_Reproject_Points,
+    std::vector<cv::Point2f>& _H_Reproject_Errors,
+    bool Normal_Flag) {
     //! 单个点重投影结果，含尺度因子
     cv::Mat _Test_Reproject_Point = cv::Mat::zeros(3, 1, CV_32FC1);
     //! 单个点重投影结果，去除尺度因子影响
@@ -552,3 +565,5 @@ double _Reproject(std::vector<cv::Point3f> Object, std::vector<cv::Point2f> Imag
     double _H_Reproject_Error_Mean = cv::mean(_H_Reproject_Errors)[0];
     return _H_Reproject_Error_Mean;
 }
+
+//! 分解单应性矩阵 H 
