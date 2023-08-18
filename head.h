@@ -24,16 +24,6 @@ struct _Line
     double b;
     double c;
 };
-//! 点对
-struct _Vec_Point_Pair
-{
-    //! 位于激光平面的坐标vec
-    std::vector<cv::Point3f> p1;
-
-    //! 位于传感器(图像)平面的坐标vec
-    std::vector<cv::Point3f> p2;
-};
-
 
 //! 角度 -> 弧度制 -> 单位rad
 //! theta_1[已知] 激光平面与光轴夹角
@@ -81,9 +71,9 @@ _Plane P2 = { 0.0,0.0,0.0,0.0 };
 const int LINE_NUMBER = 15 * 11;
 
 //! 设置畸变因子
-const double k1 = 0.04408749451738147;
-const double k2 = 0.003288813627739166;
-const double k3 = 0.0008529518568999;
+//const double k1 = 0.04408749451738147;
+//const double k2 = 0.003288813627739166;
+//const double k3 = 0.0008529518568999;
 
 //! 设置内参
 //! x轴与y轴 每毫米对应的采样点
@@ -100,28 +90,25 @@ const double Cols_Sample_Rate = 1 / Pixel_length;
 //! 
 //! 点对函数部分
 std::vector<cv::Point3f> Calculate_Optical_Sensor_Center_Point();
+
 double Calculate_Laser_Sensor_Angle();
+
 void Calculate_P2_Corner(cv::Point3f Sensor_Center, cv::Size2f Sensor_Size, double theta_9);
 
-std::vector<_Line> Limit_P2_Intersection_Point_Range(cv::Point3f Optocal_Center, vector<cv::Point3f> P2_4_Corner);
 cv::Point3f Calculate_Line_Plane_Intersection_Point(cv::Point3f optical_center, _Plane P, _Line Line);
-std::vector<cv::Point3f> Calculate_Special_Points(cv::Point3f optical_center, _Plane plane, vector<cv::Point3f> Corner_Points);
-_Vec_Point_Pair Random_Generate_Point_Pair(cv::Point3f optical_center, _Plane p1, _Plane p2, vector<_Line> Line_Direction_Vector_Range, int number = LINE_NUMBER);
-
+std::vector<cv::Point3f> Rotation(vector<cv::Point3f> points, double theta);
 cv::Point3f Calculate_P1_Pixel_Origin(std::vector<cv::Point3f> Cornor_Points);
-
-std::vector<cv::Point3f> Coordinate_System_conversion_to_Pixel_P1(std::vector<cv::Point3f> Points, cv::Point3f Origin);
-std::vector<cv::Point2f> Coordinate_System_conversion_to_Pixel_P2(vector<cv::Point3f> points);
-cv::Size2f Calculate_FOV_Max(std::vector<cv::Point3f> Cornor_Points);
-cv::Size2f Calculate_FOV_Small_Size(std::vector<cv::Point3f> Cornor_Points);
+cv::Point3f Calculate_P2_Pixel_Origin(std::vector<cv::Point3f> Cornor_Points);
+//! 两平面特殊点 
+std::vector<cv::Point3f> Calculate_Special_Points(cv::Point3f optical_center, _Plane plane, vector<cv::Point3f> Special_Points);
+std::vector<cv::Point2f> Coordinate_System_conversion_to_Pixel_P2(vector<cv::Point3f> points, cv::Point3f P2_Pixel_Origin);
 
 std::vector<cv::Point3f> FOV_Points_Small(vector<cv::Point3f> Corner_Points);
 
-cv::Point3f Calculate_Object_Center_Point(std::vector<cv::Point3f> Cornor_Points);
+std::vector<vector<cv::Point3f>> Regular_Generate_Point_Pair(cv::Point3f optical_center, _Plane p2, cv::Point3f P1_Origin);
 
-_Vec_Point_Pair Regular_Generate_Point_Pair(cv::Point3f optical_center, _Plane p1, _Plane p2, std::vector<cv::Point3f> P1_Cornor_Points_Small);
-//! 标定函数部分
-//! 
+
+//! 标定函数部分 ===============================================================================================
 //! 构建P矩阵
 cv::Mat Matrix_P(std::vector<cv::Point3f>Object, std::vector<cv::Point2f>Image);
 
