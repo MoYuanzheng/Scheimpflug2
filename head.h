@@ -53,7 +53,7 @@ double distance_h = distance_e - distance_k;
 double distance_g = distance_a / tan(theta_1);
 
 //! p1为激光平面
-const _Plane p1 = { 0,1.0,0,0 };
+std::vector<_Plane> P1;
 
 //! 靶面 -> 尺寸 -> 单位毫米
 const cv::Size2f Sensor_Size = { 4.608,9.216 };
@@ -96,17 +96,15 @@ double Calculate_Laser_Sensor_Angle();
 void Calculate_P2_Corner(cv::Point3f Sensor_Center, cv::Size2f Sensor_Size, double theta_9);
 
 cv::Point3f Calculate_Line_Plane_Intersection_Point(cv::Point3f optical_center, _Plane P, _Line Line);
-std::vector<cv::Point3f> Rotation(vector<cv::Point3f> points, double theta);
-cv::Point3f Calculate_P1_Pixel_Origin(std::vector<cv::Point3f> Cornor_Points);
+std::vector< std::vector<cv::Point3f>> Rotation(std::vector< std::vector<cv::Point3f>> points, double theta);
+std::vector < cv::Point3f> Calculate_P1_Pixel_Origin(std::vector < std::vector<cv::Point3f>> Cornor_Points);
 cv::Point3f Calculate_P2_Pixel_Origin(std::vector<cv::Point3f> Cornor_Points);
 //! 两平面特殊点 
-std::vector<cv::Point3f> Calculate_Special_Points(cv::Point3f optical_center, _Plane plane, vector<cv::Point3f> Special_Points);
-std::vector<cv::Point2f> Coordinate_System_conversion_to_Pixel_P2(vector<cv::Point3f> points, cv::Point3f P2_Pixel_Origin);
-
+std::vector< std::vector<cv::Point3f>> Calculate_Special_Points(cv::Point3f optical_center, std::vector<_Plane> plane, std::vector<cv::Point3f> Special_Points);
+std::vector< std::vector<cv::Point2f>> Coordinate_System_conversion_to_Pixel_P2(std::vector < std::vector<cv::Point3f>> points, cv::Point3f P2_Pixel_Origin);
 std::vector<cv::Point3f> FOV_Points_Small(vector<cv::Point3f> Corner_Points);
 
-std::vector<vector<cv::Point3f>> Regular_Generate_Point_Pair(cv::Point3f optical_center, _Plane p2, cv::Point3f P1_Origin);
-
+std::vector < std::vector<vector<cv::Point3f>>> Regular_Generate_Point_Pair(cv::Point3f optical_center, _Plane p2, std::vector < cv::Point3f> P1_Origin);
 
 //! 标定函数部分 ===============================================================================================
 //! 功 能：构建 P 矩阵，用于SVD分解的输入
@@ -126,9 +124,9 @@ cv::Mat Martix_H(cv::Mat Matrix_P);
 //! 参数5：_H_Reproject_Errors : 各点重投影误差集合
 //! 参数6：Normal_Flag : 单应性矩阵是否归一化
 double _Reproject(
-    std::vector<cv::Point3f> Object, 
-    std::vector<cv::Point2f> Image, 
-    cv::Mat _H, 
-    std::vector<cv::Point2f>& _H_Reproject_Points, 
-    std::vector<cv::Point2f>& _H_Reproject_Errors, 
+    std::vector<cv::Point3f> Object,
+    std::vector<cv::Point2f> Image,
+    cv::Mat _H,
+    std::vector<cv::Point2f>& _H_Reproject_Points,
+    std::vector<cv::Point2f>& _H_Reproject_Errors,
     bool Normal_Flag);
