@@ -109,8 +109,26 @@ std::vector<vector<cv::Point3f>> Regular_Generate_Point_Pair(cv::Point3f optical
 
 
 //! 标定函数部分 ===============================================================================================
-//! 构建P矩阵
+//! 功 能：构建 P 矩阵，用于SVD分解的输入
+//! 参数1：物体的世界坐标（自定义）
+//! 参数2：图像像素坐标
 cv::Mat Matrix_P(std::vector<cv::Point3f>Object, std::vector<cv::Point2f>Image);
 
-//! 分解
+//! 功 能：进行SVD分解，得到单应性矩阵 H
+//! 参数1：由Object坐标与Image坐标构成的矩阵
 cv::Mat Martix_H(cv::Mat Matrix_P);
+
+//! 功 能：通过重投影 测试单应性矩阵 H，并返回 误差均值
+//! 参数1：物体的世界坐标（自定义）
+//! 参数2：图像像素坐标
+//! 参数3：单应性矩阵 H
+//! 参数4：_H_Reproject_Points : 各点重投影结果集合
+//! 参数5：_H_Reproject_Errors : 各点重投影误差集合
+//! 参数6：Normal_Flag : 单应性矩阵是否归一化
+double _Reproject(
+    std::vector<cv::Point3f> Object, 
+    std::vector<cv::Point2f> Image, 
+    cv::Mat _H, 
+    std::vector<cv::Point2f>& _H_Reproject_Points, 
+    std::vector<cv::Point2f>& _H_Reproject_Errors, 
+    bool Normal_Flag);

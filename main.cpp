@@ -35,7 +35,6 @@ int main() {
 
     //! 改变像平面坐标系 以像平面角点为原点 建立像素坐标
     std::vector<cv::Point2f>Image_Pixel_Points = Coordinate_System_conversion_to_Pixel_P2(PointPair[1], P2_Pixel_Origin);
-
     ////! 根据matlab格式打印坐标
     //cout << endl << "p1点 x" << endl;
     //for (int i = 0; i < PointPair.p1.size(); i++) {
@@ -135,42 +134,47 @@ int main() {
     //    {228.714508,290.991791 }
     //};
 
-    //! 手动标定部分
-    cv::Mat _P = Matrix_P(PointPair[2], Image_Pixel_Points);
-    cv::Mat _H = Martix_H(_P);
-
-    // !**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--
+    // !-------- OpenCV 自动标定 ----------------------------------------------------------------------------------------------------
     std::vector < std::vector<cv::Point3f>> Object_Vec_CV;
     std::vector < std::vector<cv::Point2f>> Image_Vec_CV;
 
     Object_Vec_CV.push_back(PointPair[2]);
     Image_Vec_CV.push_back(Image_Pixel_Points);
-    //! ----------------------------------------------------------------------------------------------------------------
+    cv::Mat cameraMatrix, distCoeffs;
+    std::vector<cv::Mat> rvecsMat, tvecsMat;
 
-    cv::Mat cameraMatrix;
-    cv::Mat distCoeffs;
-    std::vector<cv::Mat> rvecsMat;
-    std::vector<cv::Mat> tvecsMat;
-
-    /*运行标定函数*/
-    float err_first = 0.0;
     //! cv::CALIB_TILTED_MODEL 
-    err_first = cv::calibrateCamera(Object_Vec_CV, Image_Vec_CV, Image_Size, cameraMatrix, distCoeffs, rvecsMat, tvecsMat, 0);
+     float err_first = cv::calibrateCamera(Object_Vec_CV, Image_Vec_CV, Image_Size, cameraMatrix, distCoeffs, rvecsMat, tvecsMat, cv::CALIB_TILTED_MODEL);
+
+    //! 手动标定部分
+    //! -------- OpenCV 单应性矩阵测试 ----------------------------------------------------------------------------------------------------
+    cv::Mat homographyMatrix = cv::findHomography(PointPair[2], Image_Pixel_Points, cv::LMEDS);
+    homographyMatrix.convertTo(homographyMatrix, CV_32FC1);
+    std::vector<cv::Point2f> _CV_H_Reproject_Points;
+    std::vector<cv::Point2f> _CV_H_Reproject_Errors;
+    double _CV_H_Error_Mean = _Reproject(PointPair[2], Image_Pixel_Points, homographyMatrix, _CV_H_Reproject_Points, _CV_H_Reproject_Errors, false);
+    
+    //! --------SVD 单应性矩阵测试----------------------------------------------------------------------------------------------------
+    cv::Mat _P = Matrix_P(PointPair[2], Image_Pixel_Points);
+    cv::Mat _H = Martix_H(_P);
+    std::vector<cv::Point2f> _H_Reproject_Points;
+    std::vector<cv::Point2f> _H_Reproject_Errors;
+    double _H_Error_Mean = _Reproject(PointPair[2], Image_Pixel_Points, _H, _H_Reproject_Points, _H_Reproject_Errors, true);
 
 
-    //! 经测试 相差一个尺度因子
-    cv::Mat _Test_I1 = cv::Mat::zeros(3, 1, CV_32FC1);
-    _Test_I1.at<float>(0, 0) = 1.0;
-    _Test_I1.at<float>(1, 0) = 1.0;
-    _Test_I1.at<float>(2, 0) = 0.0;
-    cout << _H * _Test_I1 << endl;
-
+    // !**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--**--
     //! 保存重新计算得到的投影点
-    vector<cv::Point2f> image_points2;
+    vector<cv::Point2f> Reprojection_Points;
+    vector<cv::Point2f> Reprojection_Error_All;
 
-    projectPoints(_Test_I1, rvecsMat[0], tvecsMat[0], cameraMatrix, distCoeffs, image_points2);
-
-    cout << "重投影" << image_points2 << endl;
+    for (int i = 0; i < PointPair[2].size(); i++) {
+        projectPoints(PointPair[2], rvecsMat[0], tvecsMat[0], cameraMatrix, distCoeffs, Reprojection_Points);
+        Reprojection_Error_All.push_back({
+            fabs(Image_Pixel_Points[i].x - Reprojection_Points[i].x),
+            fabs(Image_Pixel_Points[i].y - Reprojection_Points[i].y),
+            });
+    }
+    double Reprojection_Error_Mean = cv::mean(Reprojection_Error_All)[0];
 
     /*输出内参数*/
     std::cout << "cameraMatrix:" << std::endl << cameraMatrix << std::endl;
@@ -383,10 +387,11 @@ std::vector<cv::Point2f> Coordinate_System_conversion_to_Pixel_P2(vector<cv::Poi
     return Image_Pixel_Points;
 }
 
-//! PointPair[0] => P1平面
-//! PointPair[1] => P2平面
-//! PointPair[2] => P1平面的交叉点坐标
+//! 求取点对 p1 -> p2 映射，并保留 P1 映射点的坐标系坐标
 std::vector<vector<cv::Point3f>> Regular_Generate_Point_Pair(cv::Point3f optical_center, _Plane p2, cv::Point3f P1_Origin) {
+    //! PointPair[0] => P1平面
+    //! PointPair[1] => P2平面
+    //! PointPair[2] => P1平面的交叉点坐标
     //! 每一毫米生成一个点
     vector<cv::Point3f> PointPair_0;
     vector<cv::Point3f> PointPair_1;
@@ -421,7 +426,7 @@ std::vector<vector<cv::Point3f>> Regular_Generate_Point_Pair(cv::Point3f optical
 }
 
 //! 标定函数部分
-//! 构建待分解矩阵P
+//! 构建初始矩阵P
 cv::Mat Matrix_P(std::vector<cv::Point3f>Object, std::vector<cv::Point2f>Image) {
 
     int row_number = Object.size();
@@ -429,6 +434,7 @@ cv::Mat Matrix_P(std::vector<cv::Point3f>Object, std::vector<cv::Point2f>Image) 
     //! 认定激光平面深度为0 故Z轴不参与计算 
     cv::Mat Matrix_P = cv::Mat::zeros(row_number * 2, 9, CV_32F);
     int index = 0;
+
     for (int i = 0; i < row_number * 2; i++) {
         //! 偶数列
         index = i / 2;
@@ -469,7 +475,7 @@ cv::Mat Matrix_P(std::vector<cv::Point3f>Object, std::vector<cv::Point2f>Image) 
     return Matrix_P;
 }
 
-//! 得到单应性矩阵M
+//! 通过对 P 进行 SVD 分解得到单应性矩阵 H
 cv::Mat Martix_H(cv::Mat Matrix_P) {
     //cv::Mat Martix_H = cv::Mat::zeros(9, 1, CV_32F);
 
@@ -498,4 +504,51 @@ cv::Mat Martix_H(cv::Mat Matrix_P) {
 
     cv::Mat Martix_H = Vt.row(8).reshape(0, 3);
     return Martix_H;
+}
+
+//! 通过重投影 测试单应性矩阵，并返回 误差均值
+//! 参数4：_H_Reproject_Points : 各点重投影结果集合
+//! 参数5：_H_Reproject_Errors : 各点重投影误差集合
+//! 参数6：Normal_Flag : 单应性矩阵是否归一化
+double _Reproject(std::vector<cv::Point3f> Object, std::vector<cv::Point2f> Image, cv::Mat _H, std::vector<cv::Point2f>& _H_Reproject_Points, std::vector<cv::Point2f>& _H_Reproject_Errors, bool Normal_Flag) {
+    //! 单个点重投影结果，含尺度因子
+    cv::Mat _Test_Reproject_Point = cv::Mat::zeros(3, 1, CV_32FC1);
+    //! 单个点重投影结果，去除尺度因子影响
+    cv::Mat _Test_Res;
+
+    for (int i = 0; i < Object.size(); i++) {
+        _Test_Reproject_Point.at<float>(0, 0) = Object[i].x;
+        _Test_Reproject_Point.at<float>(1, 0) = Object[i].y;
+        _Test_Reproject_Point.at<float>(2, 0) = 1.0;
+
+        //! 单应性矩阵与测试点（P1）相乘 = 重投影点
+        _Test_Res = _H * _Test_Reproject_Point;
+        if (Normal_Flag) {
+            //! 重投影后各点位置
+            _H_Reproject_Points.push_back({
+                _Test_Res.at<float>(0, 0) / _Test_Res.at<float>(2, 0),
+                _Test_Res.at<float>(1, 0) / _Test_Res.at<float>(2, 0)
+                });
+            //! 重投影后各点误差
+            _H_Reproject_Errors.push_back({
+                fabs(_Test_Res.at<float>(0, 0) / _Test_Res.at<float>(2, 0) - Image[i].x),
+                fabs(_Test_Res.at<float>(1, 0) / _Test_Res.at<float>(2, 0) - Image[i].y)
+                });
+        }
+        else {
+            //! 重投影后各点位置
+            _H_Reproject_Points.push_back({
+                _Test_Res.at<float>(0, 0) ,
+                _Test_Res.at<float>(1, 0)
+                });
+            //! 重投影后各点误差
+            _H_Reproject_Errors.push_back({
+                fabs(_Test_Res.at<float>(0, 0) - Image[i].x),
+                fabs(_Test_Res.at<float>(1, 0) - Image[i].y)
+                });
+        }
+    }
+    //! 均值误差
+    double _H_Reproject_Error_Mean = cv::mean(_H_Reproject_Errors)[0];
+    return _H_Reproject_Error_Mean;
 }
