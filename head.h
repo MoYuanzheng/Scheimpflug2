@@ -6,9 +6,10 @@
 #include<vector>
 #include<algorithm>
 #include<opencv2/opencv.hpp>
+#include<opencv2/core.hpp>
 
 using namespace std;
-
+using namespace cv;
 const double PI = 4 * atan(1);
 //! 平面结构
 struct _Plane {
@@ -59,7 +60,7 @@ std::vector<_Plane> P1;
 const cv::Size2f Sensor_Size = { 4.608,9.216 };
 
 //! 靶面 -> 坐标 -> 角点
-vector<cv::Point3f> P2_4_Corner;
+vector< cv::Point3f> P2_4_Corner;
 
 //! 靶面 -> 尺寸 -> 像素
 const cv::Size Image_Size = { 1024,2048 };
@@ -89,28 +90,27 @@ const double Cols_Sample_Rate = 1 / Pixel_length;
 //! 函数声明部分
 //! 
 //! 点对函数部分
-std::vector<cv::Point3f> Calculate_Optical_Sensor_Center_Point();
+std::vector< cv::Point3f> Calculate_Optical_Sensor_Center_Point();
 
 double Calculate_Laser_Sensor_Angle();
 
 void Calculate_P2_Corner(cv::Point3f Sensor_Center, cv::Size2f Sensor_Size, double theta_9);
 
 cv::Point3f Calculate_Line_Plane_Intersection_Point(cv::Point3f optical_center, _Plane P, _Line Line);
-std::vector< std::vector<cv::Point3f>> Rotation(std::vector< std::vector<cv::Point3f>> points, double theta);
-std::vector < cv::Point3f> Calculate_P1_Pixel_Origin(std::vector < std::vector<cv::Point3f>> Cornor_Points);
-cv::Point3f Calculate_P2_Pixel_Origin(std::vector<cv::Point3f> Cornor_Points);
+std::vector< std::vector< cv::Point3f>> Rotation(std::vector< std::vector< cv::Point3f>> points, double theta);
+std::vector< cv::Point3f> Calculate_P1_Pixel_Origin(std::vector< std::vector< cv::Point3f>> Cornor_Points);
+cv::Point3f Calculate_P2_Pixel_Origin(std::vector< cv::Point3f> Cornor_Points);
 //! 两平面特殊点 
-std::vector< std::vector<cv::Point3f>> Calculate_Special_Points(cv::Point3f optical_center, std::vector<_Plane> plane, std::vector<cv::Point3f> Special_Points);
-std::vector< std::vector<cv::Point2f>> Coordinate_System_conversion_to_Pixel_P2(std::vector < std::vector<cv::Point3f>> points, cv::Point3f P2_Pixel_Origin);
-std::vector<cv::Point3f> FOV_Points_Small(vector<cv::Point3f> Corner_Points);
+std::vector< std::vector< cv::Point3f>> Calculate_Special_Points(cv::Point3f optical_center, std::vector<_Plane> plane, std::vector< cv::Point3f> Special_Points);
+std::vector< std::vector< cv::Point2f>> Coordinate_System_conversion_to_Pixel_P2(std::vector< std::vector< cv::Point3f>> points, cv::Point3f P2_Pixel_Origin);
 
-std::vector < std::vector<vector<cv::Point3f>>> Regular_Generate_Point_Pair(cv::Point3f optical_center, _Plane p2, std::vector < cv::Point3f> P1_Origin);
+std::vector< std::vector<vector< cv::Point3f>>> Regular_Generate_Point_Pair(cv::Point3f optical_center, std::vector<_Plane>p1, _Plane p2, std::vector< cv::Point3f> P1_Origin);
 
 //! 标定函数部分 ===============================================================================================
 //! 功 能：构建 P 矩阵，用于SVD分解的输入
 //! 参数1：物体的世界坐标（自定义）
 //! 参数2：图像像素坐标
-cv::Mat Matrix_P(std::vector<cv::Point3f>Object, std::vector<cv::Point2f>Image);
+cv::Mat Matrix_P(std::vector< cv::Point3f>Object, std::vector< cv::Point2f>Image);
 
 //! 功 能：进行SVD分解，得到单应性矩阵 H
 //! 参数1：由Object坐标与Image坐标构成的矩阵
@@ -123,10 +123,13 @@ cv::Mat Martix_H(cv::Mat Matrix_P);
 //! 参数4：_H_Reproject_Points : 各点重投影结果集合
 //! 参数5：_H_Reproject_Errors : 各点重投影误差集合
 //! 参数6：Normal_Flag : 单应性矩阵是否归一化
-double _Reproject(
-    std::vector<cv::Point3f> Object,
-    std::vector<cv::Point2f> Image,
+double _H_Reproject(
+    std::vector< cv::Point3f> Object,
+    std::vector< cv::Point2f> Image,
     cv::Mat _H,
-    std::vector<cv::Point2f>& _H_Reproject_Points,
-    std::vector<cv::Point2f>& _H_Reproject_Errors,
+    std::vector< cv::Point2f>& _H_Reproject_Points,
+    std::vector< cv::Point2f>& _H_Reproject_Errors,
     bool Normal_Flag);
+
+void Normalize(const std::vector<cv::Point2f>& point_vec, std::vector<cv::Point2f>* normed_point_vec, cv::Mat* norm_T);
+std::vector< cv::Mat> Remove_Normal_Martix_H(std::vector< cv::Mat> _H, std::vector< std::vector< cv::Point3f>>Object, std::vector< std::vector< cv::Point2f>>Image);
